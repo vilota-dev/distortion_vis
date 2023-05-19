@@ -5,15 +5,15 @@ import matplotlib.pyplot as plt
 def generate_distortion_quiver(distortion_model, params):
     # Given distortion model parameters
     if distortion_model == "rantan8":
-        # Your implementation for rantan8 distortion model parameters here
+        # implementation for rantan8 distortion model parameters here
         pass
     elif distortion_model == "eucm":
-        # Your implementation for eucm distortion model parameters here
+        # implementation for eucm distortion model parameters here
         pass
     elif distortion_model == "kb4":
         fx, fy, cx, cy, k1, k2, k3, k4 = params
     elif distortion_model == "ds":
-        # Your implementation for ds distortion model parameters here
+        # implementation for ds distortion model parameters here
         pass
     else:
         raise ValueError("Unsupported distortion model.")
