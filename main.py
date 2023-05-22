@@ -1,5 +1,5 @@
 import streamlit as st
-import distortion_models
+from distortion_models import *
 import visualiser
 
 
@@ -49,7 +49,7 @@ def main():
         k3 = st.sidebar.number_input('k3', step=1e-8, format="%.8f", value=0.0007)
         k4 = st.sidebar.number_input('k4', step=1e-8, format="%.8f", value=-0.0002)
 
-        model = distortion_models.KB4(fx, fy, cx, cy, k1, k2, k3, k4)
+        model = KB4(fx, fy, cx, cy, k1, k2, k3, k4)
 
     elif selected_model == 'Double Sphere (ds)':
         xi = st.sidebar.number_input('xi', step=1e-8, format="%.8f", value=-0.1183471725196422)

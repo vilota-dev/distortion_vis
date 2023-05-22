@@ -28,3 +28,11 @@ The tool currently supports the following distortion models:
 - `ds`
 - `radtan8`
 - `eucm`
+
+
+## Todo
+- [ ] Parse the file uploader (JSON) and automatically input values
+- [ ] Add support for multiple cameras dynamically ([tabs](https://docs.streamlit.io/library/api-reference/layout/st.tabs)?)
+- [ ] Add project error plot like [here](https://github.com/punit-bhatt/double-sphere-model/tree/master)
+## Resources
+- [Camera Model intrinsics and extrinsics](https://towardsdatascience.com/what-are-intrinsic-and-extrinsic-camera-parameters-in-computer-vision-7071b72fb8ec)
