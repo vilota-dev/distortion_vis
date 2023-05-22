@@ -1,4 +1,6 @@
 **/.DS_Store
+.fleet
+.idea
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
