@@ -1,5 +1,6 @@
 from .pinhole import Pinhole
 import numpy as np
+import torch
 
 
 class KB4(Pinhole):
@@ -10,11 +11,16 @@ class KB4(Pinhole):
     def __str__(self):
         return "Kannala Brandt 4 (kb4)"
 
-    def distort(self, X_normalized, Y_normalized):
-        r = np.sqrt(X_normalized ** 2 + Y_normalized ** 2)
-        theta = np.arctan(r)
-        theta_distorted = theta * (1 + self.k1 * theta ** 2 + self.k2 * theta ** 4 +
-                                   self.k3 * theta ** 6 + self.k4 * theta ** 8)
-        X_distorted = X_normalized * theta_distorted / r
-        Y_distorted = Y_normalized * theta_distorted / r
-        return X_distorted, Y_distorted
+    def world2cam(self, points):
+        x, y, z = points.T
+
+        r = np.sqrt(x ** 2 + y ** 2)
+
+        theta = np.arctan(r / z)
+        theta_distorted = theta + self.k1 * theta ** 3 + self.k2 * theta ** 5 + \
+                          self.k3 * theta ** 7 + self.k4 * theta ** 9
+
+        u = self.fx * theta_distorted * x / r + self.cx
+        v = self.fy * theta_distorted * y / r + self.cy
+
+        return torch.hstack((u.reshape(-1, 1), v.reshape(-1, 1)))
