@@ -36,6 +36,8 @@ def main():
     st.sidebar.divider()
 
     # Pinhole Camera common parameters
+    # Since the parameters are default for all camera models, the points can look iffy for some models
+    # To get proper output, use ur own values
     fx = st.sidebar.number_input('fx', step=0.1, format="%.3f", value=409.56013372715798)
     fy = st.sidebar.number_input('fy', step=0.1, format="%.3f", value=410.48431621672327)
     cx = st.sidebar.number_input('cx', step=0.1, format="%.3f", value=654.3040038316136)
@@ -52,10 +54,10 @@ def main():
         model = KB4(fx, fy, cx, cy, k1, k2, k3, k4)
 
     elif selected_model == 'Double Sphere (ds)':
-        xi = st.sidebar.number_input('xi', step=1e-8, format="%.8f", value=-0.1183471725196422)
-        alpha = st.sidebar.number_input('alpha', step=1e-8, format="%.8f", value=0.10426563424702325)
+        xi = st.sidebar.number_input('xi', step=0.01, format="%.8f", value=-0.1183471725196422)
+        alpha = st.sidebar.number_input('alpha', step=0.01, format="%.8f", value=0.10426563424702325)
 
-        model = distortion_models.DoubleSphere(fx, fy, cx, cy, xi, alpha)
+        model = DoubleSphere(fx, fy, cx, cy, xi, alpha)
 
     elif selected_model == "Radial Tangential (radtan8)":
         k1 = st.sidebar.number_input('k1', step=1e-8, format="%.8f", value=-0.34343072695540086)
@@ -68,19 +70,19 @@ def main():
         k6 = st.sidebar.number_input('k6', step=1e-8, format="%.8f", value=0.008240062843272636)
         rpmax = st.sidebar.number_input('rpmax', step=1e-6, format="%.6f", value=0.0)
 
-        model = distortion_models.RadTan8(fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, k5, k6, rpmax)
+        model = RadTan8(fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, k5, k6, rpmax)
 
     elif selected_model == 'Enhanced Unified Camera Model (eucm)':
-        alpha = st.sidebar.number_input('alpha', step=1e-8, format="%.8f", value=0.00007992209678892431)
+        alpha = st.sidebar.number_input('alpha', min_value=0.0, max_value=1.0, step=1e-8, format="%.8f", value=0.00007992209678892431)
         beta = st.sidebar.number_input('beta', step=1e-8, format="%.8f", value=20.180947456852793)
 
-        model = distortion_models.EUCM(fx, fy, cx, cy, alpha, beta)
+        model = EUCM(fx, fy, cx, cy, alpha, beta)
     else:
         raise ValueError("Unsupported distortion model")
 
     viz = visualiser.DistortionVisualizer(width, height, num_points=num_points, model=model)
 
-    viz.generate_distortion_quiver()
+    viz.visualize_distortion()
 
 
 if __name__ == '__main__':
