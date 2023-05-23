@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import streamlit as st
-
+import torch
 
 class DistortionVisualizer:
     """ Class for the matplotlib.pyplot quiver plot visualizer """
@@ -18,20 +18,27 @@ class DistortionVisualizer:
         X, Y = np.meshgrid(x, y)
         return X, Y
 
-    def _normalize(self, X, Y):
-        """ Normalize points to the camera coordinate system. From 2D -> 3D """
-        X_normalized = (X - self.model.cx) / self.model.fx
-        Y_normalized = (Y - self.model.cy) / self.model.fy
-        return X_normalized, Y_normalized
+    def _create_3D_grid(self):
+        x = np.linspace((-self.width / self.model.fx) / 2, (self.width / self.model.fx) / 2, self.num_points)
+        y = np.linspace((-self.height / self.model.fy) / 2, (self.height / self.model.fy) / 2, self.num_points)
+        z = 1  # Ignoring the depth for visualization purposes
 
-    def _denormalize(self, X_normalized, Y_normalized):
-        """ Denormalize points to the image coordinate system. From 3D -> 2D
-        """
-        X = X_normalized * self.model.fx + self.model.cx
-        Y = Y_normalized * self.model.fy + self.model.cy
-        return X, Y
+        X, Y = np.meshgrid(x, y)
+        Z = np.full_like(X, z)
 
-    def _calculate_displacement_vectors(self, X, Y, X_distorted, Y_distorted):
+        points_3D = np.stack([X.flatten(), Y.flatten(), Z.flatten()], axis=1)
+        return points_3D
+
+    def _filter_points(self, generated_points, projected_points):
+        valid = (projected_points[:, 0] >= 0) & (projected_points[:, 0] < self.width)
+        valid = valid & (projected_points[:, 1] >= 0) & (projected_points[:, 1] < self.height)
+
+        projected_points = projected_points[valid]
+        generated_points = generated_points[valid]
+        return generated_points, projected_points
+
+    @staticmethod
+    def _calculate_displacement_vectors(X, Y, X_distorted, Y_distorted):
         """ Calculate the displacement vectors between the distorted and undistorted points."""
         U = X_distorted - X
         V = Y_distorted - Y
@@ -39,19 +46,29 @@ class DistortionVisualizer:
 
     def _plot_quiver(self, X, Y, X_distorted, Y_distorted, U, V):
         """ Plot the displacement vectors. """
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 5))
         plt.quiver(X, Y, U, V, angles='xy', scale_units='xy', scale=1, width=0.002, color='r', alpha=0.5)
-        plt.scatter(X, Y, marker='.', color='b', label='Original Points')
-        plt.scatter(X_distorted, Y_distorted, marker='.', color='r', label='Distorted Points')
+        plt.scatter(X, Y, marker='.', color='blue', label='Original Points')
+        plt.scatter(X_distorted, Y_distorted, marker='.', color='red', label='Distorted Points')
         plt.legend()
         plt.title("Quiver Plot of Distortion Model: {}".format(self.model))
         plt.gca().set_aspect('equal', adjustable='box')
         st.pyplot(plt)
 
-    def generate_distortion_quiver(self):
-        X, Y = self._create_grid()
-        X_normalized, Y_normalized = self._normalize(X, Y)
-        X_distorted, Y_distorted = self.model.distort(X_normalized, Y_normalized)
-        X_distorted, Y_distorted = self._denormalize(X_distorted, Y_distorted)
-        U, V = self._calculate_displacement_vectors(X, Y, X_distorted, Y_distorted)
-        self._plot_quiver(X, Y, X_distorted, Y_distorted, U, V)
+    def visualize_distortion(self):
+        generated_points = self._create_3D_grid()
+
+        # Use the distortion model's method to convert the 3D points to 2D points
+        distorted_points = self.model.world2cam(torch.tensor(generated_points, dtype=torch.float))
+
+        # Filter out the points that are outside the self.width and self.height (defined by resolution of camera)
+        generated_points, distorted_points = self._filter_points(generated_points, distorted_points)
+
+        # Pinhole model
+        x_original, y_original = self.model.project(generated_points)
+
+        # Calculate the displacement vectors between the distorted and undistorted points (from pinhole model)
+        U, V = self._calculate_displacement_vectors(x_original, y_original, distorted_points[:, 0], distorted_points[:, 1])
+
+        self._plot_quiver(x_original, y_original, distorted_points[:, 0], distorted_points[:, 1], U, V)
+
