@@ -55,6 +55,27 @@ class DistortionVisualizer:
         plt.gca().set_aspect('equal', adjustable='box')
         st.pyplot(plt)
 
+    def _plot_histogram(self, U, V):
+        """ Plot the histogram of the displacement vectors. """
+        # Grab the euclidean distance of the displacement vectors
+        euclidean_distance = np.sqrt(U ** 2 + V ** 2)
+        euclidean_distance = torch.round(euclidean_distance).to(torch.int)
+
+        max_distance = torch.max(euclidean_distance).item()  # Get the maximum value
+
+        if max_distance == 0:
+            bins = torch.tensor([0, 1])  # Set bins with a single bar at zero
+        else:
+            bins = torch.arange(0, max_distance + 1, max_distance / 10)  # Set the bins with 0.5 pixel step
+
+        plt.figure(figsize=(10, 5))
+        plt.hist(euclidean_distance, bins=bins, color='r', alpha=0.5)
+        plt.xticks(bins)
+        plt.xlabel('Euclidean Distance (pixels)')
+        plt.ylabel('Frequency')
+        plt.title("Histogram of Displacement Vectors")
+        st.pyplot(plt)
+
     def visualize_distortion(self):
         generated_points = self._create_3D_grid()
 
@@ -72,3 +93,4 @@ class DistortionVisualizer:
 
         self._plot_quiver(x_original, y_original, distorted_points[:, 0], distorted_points[:, 1], U, V)
 
+        self._plot_histogram(U, V)
