@@ -3,6 +3,18 @@ import matplotlib.pyplot as plt
 import streamlit as st
 import torch
 
+"""
+# Rotate 3D points 90 degrees
+# Use scipy to rotate
+points_3D_1 = np.dot(points_3D, np.array([[0, 0, 1], [0, -1, 0], [1, 0, 0]]))
+# Generate points for all 6 sides of the cube
+points_3D_2 = np.dot(points_3D, np.array([[0, 0, -1], [0, -1, 0], [-1, 0, 0]]))
+points_3D_3 = np.dot(points_3D, np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]))
+points_3D_4 = np.dot(points_3D, np.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]]))
+points_3D_5 = np.dot(points_3D, np.array([[0, 0, 1], [0, 0, -1], [1, 0, 0]]))
+points_3D_6 = np.dot(points_3D, np.array([[0, 0, -1], [0, 0, -1], [-1, 0, 0]]))
+"""
+
 class DistortionVisualizer:
     """ Class for the matplotlib.pyplot quiver plot visualizer """
     def __init__(self, width, height, num_points, model):
@@ -21,8 +33,7 @@ class DistortionVisualizer:
     def _create_3D_grid(self):
         x = np.linspace((-self.width / self.model.fx) / 2, (self.width / self.model.fx) / 2, self.num_points)
         y = np.linspace((-self.height / self.model.fy) / 2, (self.height / self.model.fy) / 2, self.num_points)
-        z = 1  # Ignoring the depth for visualization purposes
-
+        z = 1
         X, Y = np.meshgrid(x, y)
         Z = np.full_like(X, z)
 
@@ -86,11 +97,11 @@ class DistortionVisualizer:
         generated_points, distorted_points = self._filter_points(generated_points, distorted_points)
 
         # Pinhole model
-        x_original, y_original = self.model.project(generated_points)
+        x_original, y_original, valid_original = self.model.project(generated_points)
 
         # Calculate the displacement vectors between the distorted and undistorted points (from pinhole model)
-        U, V = self._calculate_displacement_vectors(x_original, y_original, distorted_points[:, 0], distorted_points[:, 1])
+        U, V = self._calculate_displacement_vectors(x_original[valid_original], y_original[valid_original], distorted_points[valid_original, 0], distorted_points[valid_original, 1])
 
-        self._plot_quiver(x_original, y_original, distorted_points[:, 0], distorted_points[:, 1], U, V)
+        self._plot_quiver(x_original[valid_original], y_original[valid_original], distorted_points[:, 0], distorted_points[:, 1], U, V)
 
         self._plot_histogram(U, V)
