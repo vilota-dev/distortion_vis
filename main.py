@@ -22,7 +22,11 @@ def main():
     st.sidebar.divider()
     camera_selector_placeholder = st.sidebar.empty()  # e.g: cam_a, cam_b, cam_c
     resolution_placeholder = st.sidebar.empty()  # e.g: 1280x800
-    num_points = st.sidebar.slider("Number of points", 10, 50, 20)  # Not retrieved from JSON so no need to save state
+    st.sidebar.slider("Focal length", 0.0, 1.0, 0.2, key='buffer')
+    num_points = st.sidebar.slider("Number of points", 20, 100, 10)  # Not retrieved from JSON so no need to save state
+    sphere_points = st.sidebar.slider("Sphere points", 1000, 10000, 1000, key='sphere_points')
+    # Selectbox for 3d sphere or 3d cube
+    st.sidebar.selectbox("3D shape", ['Fibonacci Sphere', '3D Cube'], key='3d_shape')
 
     # ------------------ Main page Placeholders ------------------ #
     title_placeholder = st.empty()
@@ -64,10 +68,14 @@ def main():
         else:
             raise ValueError("Unsupported distortion model")
 
+        c1, c2, c3 = st.columns(3)
+        c1.checkbox("Hide Ideal pinhole points (blue)", key='hide_pinhole_points')
+        c2.checkbox("Hide Distorted points (red)", key='hide_distorted_points')
+        c3.checkbox("Hide displacement vectors (red arrows)", key='hide_displacement_vectors')
+
         viz = visualiser.DistortionVisualizer(width, height, num_points=num_points, model=model)
 
         viz.visualize_distortion()
-        st.write(st.session_state['data'])
 
 
 if __name__ == '__main__':
