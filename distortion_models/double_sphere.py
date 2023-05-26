@@ -7,8 +7,11 @@ class DoubleSphere(Pinhole):
     def __init__(self, fx, fy, cx, cy, xi, alpha):
         self.fx_original = fx
         self.fy_original = fy
-        fx_adj = fx * (1 - alpha)
-        fy_adj = fy * (1 - alpha)
+
+        # fix the ds model scaling on focal length, to match the equivalent pinhole model
+        fx_adj = fx / (1 + xi)
+        fy_adj = fy / (1 + xi)
+
         super().__init__(fx_adj, fy_adj, cx, cy)
         self.xi, self.alpha = xi, alpha
         self.fov_ds = 180
