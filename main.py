@@ -23,10 +23,13 @@ def main():
     camera_selector_placeholder = st.sidebar.empty()  # e.g: cam_a, cam_b, cam_c
     resolution_placeholder = st.sidebar.empty()  # e.g: 1280x800
     st.sidebar.slider("Focal length", 0.0, 1.0, 0.2, key='buffer')
-    num_points = st.sidebar.slider("Number of points", 20, 100, 10)  # Not retrieved from JSON so no need to save state
-    sphere_points = st.sidebar.slider("Sphere points", 1000, 10000, 1000, key='sphere_points')
+
     # Selectbox for 3d sphere or 3d cube
     st.sidebar.selectbox("3D shape", ['Fibonacci Sphere', '3D Cube'], key='3d_shape')
+    if st.session_state['3d_shape'] == 'Fibonacci Sphere':
+        num_points = st.sidebar.slider("Point Density", 1000, 10000, 1000, key='num_points')
+    else:
+        num_points = st.sidebar.slider("Point Density", 20, 100, 10, key='num_points')  # Not retrieved from JSON so no need to save state
 
     # ------------------ Main page Placeholders ------------------ #
     title_placeholder = st.empty()
