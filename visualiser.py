@@ -1,9 +1,10 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
+import numpy as np
+import plotly.graph_objects as go
 import streamlit as st
 import torch
-import plotly.graph_objects as go
+from matplotlib.patches import Rectangle
+import pandas as pd
 
 """
 # Rotate 3D points 90 degrees
@@ -42,8 +43,38 @@ class DistortionVisualizer:
         points_3D = np.stack([X.flatten(), Y.flatten(), Z.flatten()], axis=1)
         return points_3D
 
+
+    def create_3D_cube_surface(self):
+        # x = np.linspace(0, self.width / self.model.fx, self.num_points)
+        # y = np.linspace(0, self.height / self.model.fy, self.num_points)
+        x = np.linspace((-self.width / self.model.fx) / 2, (self.width / self.model.fx) / 2, self.num_points)
+        y = np.linspace((-self.height / self.model.fy) / 2, (self.height / self.model.fy) / 2, self.num_points)
+        z = np.linspace(-1, 1, self.num_points)  # Generate a range of z values
+
+        # Create empty list to store surface points
+        surface_points = []
+
+        # Generate points on the six faces of the cube
+        for i in [x[0], x[-1]]:
+            for j in y:
+                for k in z:
+                    surface_points.append([i, j, k])
+        for i in x:
+            for j in [y[0], y[-1]]:
+                for k in z:
+                    surface_points.append([i, j, k])
+        for i in x:
+            for j in y:
+                for k in [z[0], z[-1]]:
+                    surface_points.append([i, j, k])
+
+        # Convert list to numpy array
+        points_3D = np.array(surface_points)
+
+        return points_3D
+
     def _create_fibonacci_sphere(self):
-        samples = st.session_state['sphere_points']
+        samples = st.session_state['num_points']
         phi = np.pi * (np.sqrt(5.) - 1.)  # golden angle in radians
 
         indices = np.arange(samples)
@@ -58,7 +89,6 @@ class DistortionVisualizer:
         points_3D = np.column_stack((x, y, z))
         return points_3D
 
-
     @staticmethod
     def _calculate_displacement_vectors(X, Y, X_distorted, Y_distorted):
         """ Calculate the displacement vectors between the distorted and undistorted points."""
@@ -66,15 +96,36 @@ class DistortionVisualizer:
         V = Y_distorted - Y
         return U, V
 
+    def _calc_angles(self, points_3D):
+        """
+        Given the set of generated points, calculate the azimuth and polar angles for the points.
+        :return:
+        """
+        x, y, z = points_3D[:, 0], points_3D[:, 1], points_3D[:, 2]
+
+        # careful of the axis convention, here we drop the y axis
+        azimuth_rad = np.arctan2(x, z)
+        azimuth_deg = np.rad2deg(azimuth_rad)
+
+        polar_rad = np.arctan2(np.sqrt(x**2 + y**2), z)
+        polar_deg = np.rad2deg(polar_rad)
+
+        return azimuth_deg, polar_deg
+
     def _plot_quiver(self, X, Y, X_distorted, Y_distorted, U, V):
         """ Plot the displacement vectors. """
         plt.figure(figsize=(10, 5))
+
+        plt.scatter(self.model.cx, self.model.cy, s=4, marker='o', color='green', label='Center Point')
+        plt.plot([self.model.cx, self.model.cx], [0, self.model.cy], 'g--', linewidth=0.5)
+        plt.plot([0, self.model.cx], [self.model.cy, self.model.cy], 'g--', linewidth=0.5)
+
         if not st.session_state['hide_displacement_vectors']:
             plt.quiver(X, Y, U, V, angles='xy', scale_units='xy', scale=1, width=0.002, color='r', alpha=0.5)
         if not st.session_state['hide_pinhole_points']:
-            plt.scatter(X, Y, marker='.', color='blue', label='Original Points')
+            plt.scatter(X, Y, s=1, marker='.', color='blue', label='Original Points')
         if not st.session_state['hide_distorted_points']:
-            plt.scatter(X_distorted, Y_distorted, marker='.', color='red', label='Distorted Points')
+            plt.scatter(X_distorted, Y_distorted, s=1, marker='.', color='red', label='Distorted Points')
 
         # Draw a rectangle at 0 to self.width and 0 to self.height
         plt.gca().add_patch(Rectangle((0, 0), self.width, self.height, linewidth=1, edgecolor='black', facecolor='none'))
@@ -86,51 +137,20 @@ class DistortionVisualizer:
         plt.axis([0 - self.width * buffer, self.width * (1 + buffer), 0 - self.width * buffer, self.height * (1 + buffer)])
         st.pyplot(plt)
 
-    def _plot_quiver_plotly(self, X, Y, X_distorted, Y_distorted, U, V):
-        """ Plot the displacement vectors. """
-        fig = go.Figure()
+    def _plot_histogram(self, x_original, y_original, U, V):
+        current_scale = st.session_state['buffer']
+        current_width = self.width * (1 + 2 * current_scale)
+        current_height = self.height * (1 + 2 * current_scale)
 
-        # Add the original points as scatter plot
-        fig.add_trace(go.Scatter(
-            x=X,
-            y=Y,
-            mode='markers',
-            marker=dict(
-                size=5,
-                color='blue'
-            ),
-            name='Original Points'
-        ))
+        visible = (x_original > 0) & (x_original < current_width)
+        visible &= (y_original > 0) & (y_original < current_height)
 
-        # Add the distorted points as scatter plot
-        fig.add_trace(go.Scatter(
-            x=X_distorted,
-            y=Y_distorted,
-            mode='markers',
-            marker=dict(
-                size=5,
-                color='red'
-            ),
-            name='Distorted Points'
-        ))
-
-        # Set layout properties
-        fig.update_layout(
-            title="Quiver Plot of Distortion Model: {}".format(self.model),
-            xaxis=dict(title='X', range=[min(X) - 1, max(X) + 1]),
-            yaxis=dict(title='Y', range=[min(Y) - 1, max(Y) + 1]),
-            width=960,  # Adjust the width of the plot as desired
-            height=600,  # Adjust the height of the plot as desired
-            showlegend=True
-        )
-
-        st.plotly_chart(fig, theme='streamlit')
-
-    def _plot_histogram(self, U, V):
         euclidean_distance = np.sqrt(U ** 2 + V ** 2)
+        # st.write("There are {} valid points".format(valid_points.__sizeof__()))
+        euclidean_distance = euclidean_distance[visible]
         # st.write(euclidean_distance)
 
-        bins = np.arange(0, torch.quantile(euclidean_distance, 0.9), 0.1)
+        bins = np.arange(0, torch.max(euclidean_distance), 0.1)
 
         plt.figure(figsize=(10, 5))
         plt.hist(euclidean_distance, bins=bins, color='red', alpha=0.5)
@@ -138,28 +158,35 @@ class DistortionVisualizer:
         plt.xlabel('Euclidean Distance (pixels)')
         plt.ylabel('Frequency')
 
-        # Display the plot using Streamlit
         st.pyplot(plt)
 
-        # # Create the histogram trace
-        # hist_trace = go.Histogram(x=euclidean_distance.numpy(), xbins=dict(
-        #     start=0,
-        #     end=torch.max(euclidean_distance),
-        #     size=0.1
-        # ), marker=dict(color='red', opacity=0.5))
-        #
-        # # Create the layout
-        # layout = go.Layout(
-        #     title='Histogram of Displacement Vectors',
-        #     xaxis=dict(title='Euclidean Distance (pixels)'),
-        #     yaxis=dict(title='Frequency')
-        # )
+    def _plot_statistics(self, azimuth_deg, polar_deg, x_original, y_original, U, V):
+        current_scale = st.session_state['buffer']
+        current_width = self.width * (1 + 2 * current_scale)
+        current_height = self.height * (1 + 2 * current_scale)
 
-        # Create the figure
-        # fig = go.Figure(data=[hist_trace], layout=layout)
-        #
-        # # Display the figure using Streamlit
-        # st.plotly_chart(fig)
+        visible = (x_original > 0) & (x_original < current_width)
+        visible &= (y_original > 0) & (y_original < current_height)
+
+        offset = np.sqrt(U ** 2 + V ** 2)
+        offset = offset[visible]
+        azimuth_deg = azimuth_deg[visible]
+        polar_deg = polar_deg[visible]
+
+        azi_data = pd.DataFrame({'azimuth': azimuth_deg, 'offset': offset})
+        polar_data = pd.DataFrame({'polar': polar_deg, 'offset': offset})
+        azi_data_grouped = azi_data.groupby('azimuth').mean().reset_index()
+        polar_data_grouped = polar_data.groupby('polar').mean().reset_index()
+
+
+        plt.figure(figsize=(10, 5))
+        plt.plot(azi_data_grouped['azimuth'], azi_data_grouped['offset'], '-o', color='red', alpha=0.5)
+        plt.plot(polar_data_grouped['polar'], polar_data_grouped['offset'], '-o', color='blue', alpha=0.5)
+        plt.title('Azimuth vs Offset')
+        plt.xlabel('Azimuth Angle (degrees)')
+        plt.ylabel('Offset (pixels)')
+
+        st.pyplot(plt)
 
     def _plot_3D(self, points_3D):
         fig = go.Figure(data=[go.Scatter3d(
@@ -175,9 +202,9 @@ class DistortionVisualizer:
 
         fig.update_layout(
             scene=dict(
-                xaxis=dict(title='X', range=[2 * min(points_3D[:, 0]), 2 * max(points_3D[:, 0])]),
-                yaxis=dict(title='Y', range=[2 * min(points_3D[:, 1]), 2 * max(points_3D[:, 1])]),
-                zaxis=dict(title='Z', range=[2 * min(points_3D[:, 2]), 2 * max(points_3D[:, 2])]),
+                xaxis=dict(title='X', range=[min(points_3D[:, 0]), max(points_3D[:, 0])]),
+                yaxis=dict(title='Y', range=[min(points_3D[:, 1]), max(points_3D[:, 1])]),
+                zaxis=dict(title='Z', range=[min(points_3D[:, 2]), max(points_3D[:, 2])]),
                 aspectmode='cube',
                 camera=dict(
                     eye=dict(x=1.2, y=1.2, z=1.2)
@@ -192,9 +219,11 @@ class DistortionVisualizer:
         if st.session_state['3d_shape'] == "Fibonacci Sphere":
             generated_points = self._create_fibonacci_sphere()
         else:
-            generated_points = self._create_3D_grid()
+            generated_points = self.create_3D_cube_surface()
 
         self._plot_3D(generated_points)
+
+        azimuth, polar = self._calc_angles(generated_points)
 
         # Use the distortion model's method to convert the 3D points to 2D points
         distorted_points, valid_distorted = self.model.world2cam(torch.tensor(generated_points, dtype=torch.float))
@@ -204,10 +233,14 @@ class DistortionVisualizer:
 
         valid_both = valid_distorted.numpy() & valid_original
 
+        azimuth = azimuth[valid_both]
+        polar = polar[valid_both]
+
 
         # Calculate the displacement vectors between the distorted and undistorted points (from pinhole model)
         U, V = self._calculate_displacement_vectors(x_original[valid_both], y_original[valid_both], distorted_points[valid_both, 0], distorted_points[valid_both, 1])
 
         self._plot_quiver(x_original[valid_original], y_original[valid_original], distorted_points[valid_distorted, 0], distorted_points[valid_distorted, 1], U, V)
 
-        self._plot_histogram(U, V)
+        self._plot_histogram(x_original[valid_both], y_original[valid_both], U, V)
+        self._plot_statistics(azimuth, polar, x_original[valid_both], y_original[valid_both], U, V)
