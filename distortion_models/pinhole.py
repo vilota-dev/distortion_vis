@@ -1,6 +1,4 @@
 import numpy as np
-import streamlit as st
-
 
 class Pinhole:
     def __init__(self, fx, fy, cx, cy):
