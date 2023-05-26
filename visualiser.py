@@ -6,20 +6,8 @@ import torch
 from matplotlib.patches import Rectangle
 import pandas as pd
 
-"""
-# Rotate 3D points 90 degrees
-# Use scipy to rotate
-points_3D_1 = np.dot(points_3D, np.array([[0, 0, 1], [0, -1, 0], [1, 0, 0]]))
-# Generate points for all 6 sides of the cube
-points_3D_2 = np.dot(points_3D, np.array([[0, 0, -1], [0, -1, 0], [-1, 0, 0]]))
-points_3D_3 = np.dot(points_3D, np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]))
-points_3D_4 = np.dot(points_3D, np.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]]))
-points_3D_5 = np.dot(points_3D, np.array([[0, 0, 1], [0, 0, -1], [1, 0, 0]]))
-points_3D_6 = np.dot(points_3D, np.array([[0, 0, -1], [0, 0, -1], [-1, 0, 0]]))
-"""
 
 class DistortionVisualizer:
-    """ Class for the matplotlib.pyplot quiver plot visualizer """
     def __init__(self, width, height, num_points, model):
         self.width = width
         self.height = height
@@ -33,20 +21,7 @@ class DistortionVisualizer:
         X, Y = np.meshgrid(x, y)
         return X, Y
 
-    def _create_3D_grid(self):
-        x = np.linspace((-self.width / self.model.fx) / 2, (self.width / self.model.fx) / 2, self.num_points)
-        y = np.linspace((-self.height / self.model.fy) / 2, (self.height / self.model.fy) / 2, self.num_points)
-        z = np.linspace(1, 2, self.num_points)  # Generate a range of z values
-        X, Y, Z = np.meshgrid(x, y, z)
-        # Z = np.full_like(X, z)
-
-        points_3D = np.stack([X.flatten(), Y.flatten(), Z.flatten()], axis=1)
-        return points_3D
-
-
     def create_3D_cube_surface(self):
-        # x = np.linspace(0, self.width / self.model.fx, self.num_points)
-        # y = np.linspace(0, self.height / self.model.fy, self.num_points)
         x = np.linspace((-self.width / self.model.fx) / 2, (self.width / self.model.fx) / 2, self.num_points)
         y = np.linspace((-self.height / self.model.fy) / 2, (self.height / self.model.fy) / 2, self.num_points)
         z = np.linspace(-1, 1, self.num_points)  # Generate a range of z values
@@ -68,7 +43,6 @@ class DistortionVisualizer:
                 for k in [z[0], z[-1]]:
                     surface_points.append([i, j, k])
 
-        # Convert list to numpy array
         points_3D = np.array(surface_points)
 
         return points_3D
@@ -97,10 +71,6 @@ class DistortionVisualizer:
         return U, V
 
     def _calc_angles(self, points_3D):
-        """
-        Given the set of generated points, calculate the azimuth and polar angles for the points.
-        :return:
-        """
         x, y, z = points_3D[:, 0], points_3D[:, 1], points_3D[:, 2]
 
         # careful of the axis convention, here we drop the y axis
@@ -123,9 +93,9 @@ class DistortionVisualizer:
         if not st.session_state['hide_displacement_vectors']:
             plt.quiver(X, Y, U, V, angles='xy', scale_units='xy', scale=1, width=0.002, color='r', alpha=0.5)
         if not st.session_state['hide_pinhole_points']:
-            plt.scatter(X, Y, s=1, marker='.', color='blue', label='Original Points')
+            plt.scatter(X, Y, s=10, marker='.', color='blue', label='Original Points')
         if not st.session_state['hide_distorted_points']:
-            plt.scatter(X_distorted, Y_distorted, s=1, marker='.', color='red', label='Distorted Points')
+            plt.scatter(X_distorted, Y_distorted, s=10, marker='.', color='red', label='Distorted Points')
 
         # Draw a rectangle at 0 to self.width and 0 to self.height
         plt.gca().add_patch(Rectangle((0, 0), self.width, self.height, linewidth=1, edgecolor='black', facecolor='none'))
@@ -146,9 +116,7 @@ class DistortionVisualizer:
         visible &= (y_original > 0) & (y_original < current_height)
 
         euclidean_distance = np.sqrt(U ** 2 + V ** 2)
-        # st.write("There are {} valid points".format(valid_points.__sizeof__()))
         euclidean_distance = euclidean_distance[visible]
-        # st.write(euclidean_distance)
 
         bins = np.arange(0, torch.max(euclidean_distance), 0.1)
 
@@ -178,12 +146,13 @@ class DistortionVisualizer:
         azi_data_grouped = azi_data.groupby('azimuth').mean().reset_index()
         polar_data_grouped = polar_data.groupby('polar').mean().reset_index()
 
-
         plt.figure(figsize=(10, 5))
-        plt.plot(azi_data_grouped['azimuth'], azi_data_grouped['offset'], '-o', color='red', alpha=0.5)
-        plt.plot(polar_data_grouped['polar'], polar_data_grouped['offset'], '-o', color='blue', alpha=0.5)
-        plt.title('Azimuth vs Offset')
-        plt.xlabel('Azimuth Angle (degrees)')
+        plt.plot(azi_data_grouped['azimuth'], azi_data_grouped['offset'], '-o', color='red', alpha=0.5, label='Azimuth')
+        plt.plot(polar_data_grouped['polar'], polar_data_grouped['offset'], '-o', color='blue', alpha=0.5, label='Polar')
+
+        plt.legend()
+        plt.title('Mean pixel error vs Azi/Polar angle')
+        plt.xlabel('Angle (degrees)')
         plt.ylabel('Offset (pixels)')
 
         st.pyplot(plt)
@@ -235,7 +204,6 @@ class DistortionVisualizer:
 
         azimuth = azimuth[valid_both]
         polar = polar[valid_both]
-
 
         # Calculate the displacement vectors between the distorted and undistorted points (from pinhole model)
         U, V = self._calculate_displacement_vectors(x_original[valid_both], y_original[valid_both], distorted_points[valid_both, 0], distorted_points[valid_both, 1])
