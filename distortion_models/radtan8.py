@@ -31,3 +31,5 @@ class RadTan8(Pinhole):
         v = self.fy * ypp + self.cy
         return torch.hstack((u.reshape(-1, 1), v.reshape(-1, 1)))
 
+    def cam2world(self, points_2D):
+        raise NotImplementedError

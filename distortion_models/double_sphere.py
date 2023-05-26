@@ -4,23 +4,23 @@ import torch
 
 
 class DoubleSphere(Pinhole):
-    def __init__(self, fx, fy, cx, cy, xi, alpha, fov: float = 180):
+    def __init__(self, fx, fy, cx, cy, xi, alpha):
         self.fx_original = fx
         self.fy_original = fy
         fx_adj = fx * (1 - alpha)
         fy_adj = fy * (1 - alpha)
         super().__init__(fx_adj, fy_adj, cx, cy)
         self.xi, self.alpha = xi, alpha
-        # Below parameters are not used for now.
-        self.fov = fov
-        fov_rad = self.fov / 180 * np.pi
-        self.fov_cos = np.cos(fov_rad / 2)
+        self.fov_ds = 180
 
     def __str__(self):
         return "Double Sphere (ds)"
 
     def world2cam(self, points):
         x, y, z = points.T
+
+        polar_angle = np.arctan2(np.sqrt(x**2 + y**2), z)
+        valid = np.abs(polar_angle) < np.deg2rad(self.fov_ds / 2)
 
         d1 = torch.sqrt(x ** 2 + y ** 2 + z ** 2)
         d2 = torch.sqrt(x ** 2 + y ** 2 + (self.xi * d1 + z) ** 2)
@@ -30,7 +30,7 @@ class DoubleSphere(Pinhole):
         u = self.fx_original * x / denominator + self.cx
         v = self.fy_original * y / denominator + self.cy
 
-        return torch.hstack((u.reshape(-1, 1), v.reshape(-1, 1)))
+        return torch.hstack((u.reshape(-1, 1), v.reshape(-1, 1))), valid
 
     def cam2world(self, points_2D):
         u, v = points_2D.T

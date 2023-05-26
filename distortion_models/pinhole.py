@@ -1,10 +1,11 @@
 import numpy as np
+import streamlit as st
 
 
 class Pinhole:
     def __init__(self, fx, fy, cx, cy):
         self.fx, self.fy, self.cx, self.cy = fx, fy, cx, cy
-        self.fov = 180
+        self.fov = 179
 
     def project(self, points_3D):
         """ Use FOV to reject invalid points """
@@ -15,10 +16,11 @@ class Pinhole:
         # Reject points that are behind the camera
         # Calculate polar angle for each of the points
         polar_angle = np.arctan2(np.sqrt(x**2 + y**2), z)
-        valid = polar_angle < np.deg2rad(self.fov / 2)
+        valid = np.abs(polar_angle) < np.deg2rad(self.fov / 2)
 
         x_projected = self.fx * x / z + self.cx
         y_projected = self.fy * y / z + self.cy
+
         return x_projected, y_projected, valid
 
     def unproject(self, points_2D):
