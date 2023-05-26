@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import streamlit as st
 import torch
 import plotly.graph_objects as go
@@ -57,13 +58,6 @@ class DistortionVisualizer:
         points_3D = np.column_stack((x, y, z))
         return points_3D
 
-    def _filter_points(self, generated_points, projected_points):
-        valid = (projected_points[:, 0] >= 0) & (projected_points[:, 0] < self.width)
-        valid = valid & (projected_points[:, 1] >= 0) & (projected_points[:, 1] < self.height)
-
-        projected_points = projected_points[valid]
-        generated_points = generated_points[valid]
-        return generated_points, projected_points
 
     @staticmethod
     def _calculate_displacement_vectors(X, Y, X_distorted, Y_distorted):
@@ -81,9 +75,15 @@ class DistortionVisualizer:
             plt.scatter(X, Y, marker='.', color='blue', label='Original Points')
         if not st.session_state['hide_distorted_points']:
             plt.scatter(X_distorted, Y_distorted, marker='.', color='red', label='Distorted Points')
+
+        # Draw a rectangle at 0 to self.width and 0 to self.height
+        plt.gca().add_patch(Rectangle((0, 0), self.width, self.height, linewidth=1, edgecolor='black', facecolor='none'))
+
         plt.legend()
         plt.title("Quiver Plot of Distortion Model: {}".format(self.model))
         plt.gca().set_aspect('equal', adjustable='box')
+        buffer = st.session_state['buffer']
+        plt.axis([0 - self.width * buffer, self.width * (1 + buffer), 0 - self.width * buffer, self.height * (1 + buffer)])
         st.pyplot(plt)
 
     def _plot_quiver_plotly(self, X, Y, X_distorted, Y_distorted, U, V):
@@ -128,31 +128,38 @@ class DistortionVisualizer:
 
     def _plot_histogram(self, U, V):
         euclidean_distance = np.sqrt(U ** 2 + V ** 2)
+        # st.write(euclidean_distance)
 
-        max_distance = torch.max(euclidean_distance).item()  # Get the maximum value
+        bins = np.arange(0, torch.quantile(euclidean_distance, 0.9), 0.1)
 
-        if max_distance == 0:
-            bins = torch.tensor([0, 1])  # Set bins with a single bar at zero
-        else:
-            bins = torch.arange(0, max_distance + 1, max_distance / 10)  # Set the bins with 0.5 pixel step
+        plt.figure(figsize=(10, 5))
+        plt.hist(euclidean_distance, bins=bins, color='red', alpha=0.5)
+        plt.title('Histogram of Displacement Vectors')
+        plt.xlabel('Euclidean Distance (pixels)')
+        plt.ylabel('Frequency')
 
-        # Create the histogram trace
-        hist_trace = go.Histogram(x=euclidean_distance.numpy(), nbinsx=len(bins), marker=dict(color='red', opacity=0.5))
+        # Display the plot using Streamlit
+        st.pyplot(plt)
 
-        # Create the layout
-        layout = go.Layout(
-            title='Histogram of Displacement Vectors',
-            xaxis=dict(title='Euclidean Distance (pixels)', tickvals=bins),
-            yaxis=dict(title='Frequency'),
-            bargap=0.2,
-            bargroupgap=0.1
-        )
+        # # Create the histogram trace
+        # hist_trace = go.Histogram(x=euclidean_distance.numpy(), xbins=dict(
+        #     start=0,
+        #     end=torch.max(euclidean_distance),
+        #     size=0.1
+        # ), marker=dict(color='red', opacity=0.5))
+        #
+        # # Create the layout
+        # layout = go.Layout(
+        #     title='Histogram of Displacement Vectors',
+        #     xaxis=dict(title='Euclidean Distance (pixels)'),
+        #     yaxis=dict(title='Frequency')
+        # )
 
         # Create the figure
-        fig = go.Figure(data=[hist_trace], layout=layout)
-
-        # Display the figure using Streamlit
-        st.plotly_chart(fig)
+        # fig = go.Figure(data=[hist_trace], layout=layout)
+        #
+        # # Display the figure using Streamlit
+        # st.plotly_chart(fig)
 
     def _plot_3D(self, points_3D):
         fig = go.Figure(data=[go.Scatter3d(
@@ -190,17 +197,17 @@ class DistortionVisualizer:
         self._plot_3D(generated_points)
 
         # Use the distortion model's method to convert the 3D points to 2D points
-        distorted_points = self.model.world2cam(torch.tensor(generated_points, dtype=torch.float))
-
-        # Filter out the points that are outside the self.width and self.height (defined by resolution of camera)
-        # generated_points, distorted_points = self._filter_points(generated_points, distorted_points)
+        distorted_points, valid_distorted = self.model.world2cam(torch.tensor(generated_points, dtype=torch.float))
 
         # Pinhole model
         x_original, y_original, valid_original = self.model.project(generated_points)
 
-        # Calculate the displacement vectors between the distorted and undistorted points (from pinhole model)
-        U, V = self._calculate_displacement_vectors(x_original[valid_original], y_original[valid_original], distorted_points[valid_original, 0], distorted_points[valid_original, 1])
+        valid_both = valid_distorted.numpy() & valid_original
 
-        self._plot_quiver_plotly(x_original[valid_original], y_original[valid_original], distorted_points[:, 0], distorted_points[:, 1], U, V)
+
+        # Calculate the displacement vectors between the distorted and undistorted points (from pinhole model)
+        U, V = self._calculate_displacement_vectors(x_original[valid_both], y_original[valid_both], distorted_points[valid_both, 0], distorted_points[valid_both, 1])
+
+        self._plot_quiver(x_original[valid_original], y_original[valid_original], distorted_points[valid_distorted, 0], distorted_points[valid_distorted, 1], U, V)
 
         self._plot_histogram(U, V)
