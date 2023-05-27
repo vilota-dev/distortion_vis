@@ -130,25 +130,42 @@ class DistortionVisualizer:
 
     def _plot_statistics(self, azimuth_deg, polar_deg, x_original, y_original, U, V):
         current_scale = st.session_state['buffer']
-        current_width = self.width * (1 + 2 * current_scale)
-        current_height = self.height * (1 + 2 * current_scale)
+        current_width = self.width
+        current_height = self.height
 
-        visible = (x_original > 0) & (x_original < current_width)
-        visible &= (y_original > 0) & (y_original < current_height)
+        visible = (x_original >= 0) & (x_original < current_width)
+        visible &= (y_original >= 0) & (y_original < current_height)
 
         offset = np.sqrt(U ** 2 + V ** 2)
+        offset_original = offset
         offset = offset[visible]
+        azimuth_original = azimuth_deg
+        polar_original = polar_deg
         azimuth_deg = azimuth_deg[visible]
         polar_deg = polar_deg[visible]
 
         azi_data = pd.DataFrame({'azimuth': azimuth_deg, 'offset': offset})
         polar_data = pd.DataFrame({'polar': polar_deg, 'offset': offset})
-        azi_data_grouped = azi_data.groupby('azimuth').mean().reset_index()
-        polar_data_grouped = polar_data.groupby('polar').mean().reset_index()
+
+        # Sort by the azimuth angle
+        azi_data = azi_data.sort_values(by=['azimuth'])
+        # st.write(azi_data)
+
+        azi_data_grouped = azi_data.groupby('azimuth').agg(['mean', 'std']).reset_index()
+        polar_data_grouped = polar_data.groupby('polar').agg(['mean', 'std']).reset_index()
+
+        azi_data_grouped['offset_minus_std'] = azi_data_grouped['offset']['mean'] - azi_data_grouped['offset']['std']
+        azi_data_grouped['offset_plus_std'] = azi_data_grouped['offset']['mean'] + azi_data_grouped['offset']['std']
+
+        polar_data_grouped['offset_minus_std'] = polar_data_grouped['offset']['mean'] - polar_data_grouped['offset']['std']
+        polar_data_grouped['offset_plus_std'] = polar_data_grouped['offset']['mean'] + polar_data_grouped['offset']['std']
 
         plt.figure(figsize=(10, 5))
-        plt.plot(azi_data_grouped['azimuth'], azi_data_grouped['offset'], '-o', color='red', alpha=0.5, label='Azimuth')
-        plt.plot(polar_data_grouped['polar'], polar_data_grouped['offset'], '-o', color='blue', alpha=0.5, label='Polar')
+        plt.plot(azi_data_grouped['azimuth'], azi_data_grouped['offset']['mean'], '-o', color='red', alpha=0.5, label='Azimuth Mean')
+        plt.fill_between(azi_data_grouped['azimuth'], azi_data_grouped['offset_minus_std'], azi_data_grouped['offset_plus_std'], color='red', alpha=0.2)
+
+        plt.plot(polar_data_grouped['polar'], polar_data_grouped['offset']['mean'], '-o', color='blue', alpha=0.5, label='Polar Mean')
+        plt.fill_between(polar_data_grouped['polar'], polar_data_grouped['offset_minus_std'], polar_data_grouped['offset_plus_std'], color='blue', alpha=0.2)
 
         plt.legend()
         plt.title('Mean pixel error vs Azi/Polar angle')
