@@ -28,7 +28,3 @@ class Pinhole:
         2. Pass the unprojected points to the distortion model, then project back to 2d space
         3. Then plot the displacement vectors """
         raise NotImplementedError
-
-    def world2cam(self, point3D):
-        """ Must be implemented by the child class (distortion models) """
-        raise NotImplementedError
