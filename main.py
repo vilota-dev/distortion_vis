@@ -2,6 +2,7 @@ import streamlit as st
 from distortion_models import *
 import visualiser
 import json
+
 from widgets import *
 from helper_functions import *
 
@@ -11,7 +12,7 @@ def main():
     full_name = {
         'kb4': 'Kannala Brandt 4 (kb4)',
         'ds': 'Double Sphere (ds)',
-        'radtan8': 'Radial Tangential 8 (radtan8)',
+        'pinhole-radtan8': 'Radial Tangential 8 (radtan8)',
         'eucm': "Extended Unified Camera Model (eucm)"
     }
     if "data" not in st.session_state:
@@ -49,6 +50,8 @@ def main():
         width, height = draw_resolution_config(resolution_placeholder)
 
         st.subheader(full_name[get_selected_model()])
+        pinhole_fx, pinhole_fy, pinhole_cx, pinhole_cy = draw_ideal_pinhole_config()
+        pinhole_model = Pinhole(pinhole_fx, pinhole_fy, pinhole_cx, pinhole_cy)
         fx, fy, cx, cy = draw_pinhole_config()
 
         selected_model = get_selected_model()
@@ -60,7 +63,7 @@ def main():
             xi, alpha = draw_ds_config()
             model = DoubleSphere(fx, fy, cx, cy, xi, alpha)
 
-        elif selected_model == "radtan8":
+        elif selected_model == "pinhole-radtan8":
             k1, k2, k3, k4, k5, k6, p1, p2, rpmax = draw_radtan8_config()
             model = RadTan8(fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, k5, k6, rpmax)
 
@@ -76,7 +79,7 @@ def main():
         c2.checkbox("Hide Distorted points (red)", key='hide_distorted_points')
         c3.checkbox("Hide displacement vectors (red arrows)", key='hide_displacement_vectors')
 
-        viz = visualiser.DistortionVisualizer(width, height, num_points=num_points, model=model)
+        viz = visualiser.DistortionVisualizer(width, height, num_points=num_points, model=model, pinhole_model=pinhole_model)
 
         viz.visualize_distortion()
 
