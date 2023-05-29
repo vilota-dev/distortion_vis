@@ -15,6 +15,7 @@ def main():
         'pinhole-radtan8': 'Radial Tangential 8 (radtan8)',
         'eucm': "Extended Unified Camera Model (eucm)"
     }
+    st.session_state['buffer'] = 0.2
     if "data" not in st.session_state:
         st.session_state['data'] = None
 
