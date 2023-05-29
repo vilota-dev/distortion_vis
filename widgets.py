@@ -10,6 +10,17 @@ def draw_resolution_config(placeholder):
 
     return width, height
 
+def draw_ideal_pinhole_config():
+    st.subheader("Ideal Pinhole Intrinsics")
+    temp = st.session_state['data']['value0']['intrinsics'][get_selected_camera_idx()]['intrinsics']
+    col1, col2, col3, col4 = st.columns(4)
+    fx = col1.number_input('pinhole_fx', step=0.1, format="%.3f", value=temp['fx'])
+    fy = col2.number_input('pinhole_fy', step=0.1, format="%.3f", value=temp['fy'])
+    cx = col3.number_input('pinhole_cx', step=0.1, format="%.3f", value=temp['cx'])
+    cy = col4.number_input('pinhole_cy', step=0.1, format="%.3f", value=temp['cy'])
+
+    return fx, fy, cx, cy
+
 
 def draw_pinhole_config():
     temp = st.session_state['data']['value0']['intrinsics'][get_selected_camera_idx()]['intrinsics']
