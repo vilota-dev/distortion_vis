@@ -4,14 +4,15 @@ import numpy as np
 
 class EUCM(Pinhole):
     def __init__(self, fx, fy, cx, cy, alpha, beta):
-        super().__init__(fx, fy, cx, cy)
+        self.fx, self.fy = fx, fy
+        self.cx, self.cy = cx, cy
         self.alpha, self.beta = alpha, beta
         self.fov_eucm = 180
 
     def __str__(self):
         return "Extended Unified Camera Model (eucm)"
 
-    def world2cam(self, points):
+    def project(self, points):
         x, y, z = points.T
 
         polar_angle = np.arctan2(np.sqrt(x**2 + y**2), z)
