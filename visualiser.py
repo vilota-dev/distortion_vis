@@ -5,14 +5,15 @@ import streamlit as st
 import torch
 from matplotlib.patches import Rectangle
 import pandas as pd
-
+import scipy
 
 class DistortionVisualizer:
-    def __init__(self, width, height, num_points, model):
+    def __init__(self, width, height, num_points, model, pinhole_model):
         self.width = width
         self.height = height
         self.num_points = num_points
         self.model = model
+        self.pinhole_model = pinhole_model
 
     def _create_grid(self):
         """ Create a grid of points."""
@@ -107,10 +108,46 @@ class DistortionVisualizer:
         plt.axis([0 - self.width * buffer, self.width * (1 + buffer), 0 - self.width * buffer, self.height * (1 + buffer)])
         st.pyplot(plt)
 
+    import scipy.interpolate
+
+    def _plot_heatmap(self, X, Y, U, V):
+        """ Plot the heatmap using plt.imshow"""
+        buffer = st.session_state['buffer']
+
+        width_right_bound = self.width + self.width * buffer
+        width_left_bound = 0 - self.width * buffer
+        height_upper_bound = self.height + self.height * buffer
+        height_lower_bound = 0 - self.height * buffer
+
+        visible = (X > width_left_bound) & (X < width_right_bound)
+        visible &= (Y > height_lower_bound) & (Y < height_upper_bound)
+
+        X = X[visible]
+        Y = Y[visible]
+        # st.write(X.shape)
+        displacement = np.sqrt(U ** 2 + V ** 2)
+        displacement = displacement[visible]
+        #
+        # Create a grid for interpolation
+        xi, yi = np.linspace(min(X.min(), 0), max(X.max(), self.width), 1000), np.linspace(Y.min(), Y.max(), 1000)
+        xi, yi = np.meshgrid(xi, yi)
+
+        # Now that we have a
+
+        # Use Rbf if sphere, otherwise use griddata interpolation
+        if st.session_state['3d_shape'] == 'Fibonacci Sphere':
+            rbf = scipy.interpolate.Rbf(X, Y, displacement, function='linear')
+            zi = rbf(xi, yi)
+        else:
+            zi = scipy.interpolate.griddata((X, Y), displacement, (xi, yi), method='cubic')
+
+        plt.imshow(zi, interpolation='nearest', cmap="magma", extent=[0, self.width, 0, self.height], origin='lower')
+        plt.colorbar()
+        st.pyplot(plt)
+
     def _plot_histogram(self, x_original, y_original, U, V):
-        current_scale = st.session_state['buffer']
-        current_width = self.width * (1 + 2 * current_scale)
-        current_height = self.height * (1 + 2 * current_scale)
+        current_width = self.width
+        current_height = self.height
 
         visible = (x_original > 0) & (x_original < current_width)
         visible &= (y_original > 0) & (y_original < current_height)
@@ -129,7 +166,6 @@ class DistortionVisualizer:
         st.pyplot(plt)
 
     def _plot_statistics(self, azimuth_deg, polar_deg, x_original, y_original, U, V):
-        current_scale = st.session_state['buffer']
         current_width = self.width
         current_height = self.height
 
@@ -212,11 +248,13 @@ class DistortionVisualizer:
         azimuth, polar = self._calc_angles(generated_points)
 
         # Use the distortion model's method to convert the 3D points to 2D points
-        distorted_points, valid_distorted = self.model.world2cam(torch.tensor(generated_points, dtype=torch.float))
+        distorted_points, valid_distorted = self.model.project(torch.tensor(generated_points, dtype=torch.float))
 
         # Pinhole model
-        x_original, y_original, valid_original = self.model.project(generated_points)
+        x_original, y_original, valid_original = self.pinhole_model.project(generated_points)
 
+        # valid_both refers to points that are valid in both the pinhole and distortion model
+        # so FOV is taken into account for both models
         valid_both = valid_distorted.numpy() & valid_original
 
         azimuth = azimuth[valid_both]
@@ -224,7 +262,7 @@ class DistortionVisualizer:
 
         # Calculate the displacement vectors between the distorted and undistorted points (from pinhole model)
         U, V = self._calculate_displacement_vectors(x_original[valid_both], y_original[valid_both], distorted_points[valid_both, 0], distorted_points[valid_both, 1])
-
+        self._plot_heatmap(x_original[valid_original], y_original[valid_original], U, V)
         self._plot_quiver(x_original[valid_original], y_original[valid_original], distorted_points[valid_distorted, 0], distorted_points[valid_distorted, 1], U, V)
 
         self._plot_histogram(x_original[valid_both], y_original[valid_both], U, V)
