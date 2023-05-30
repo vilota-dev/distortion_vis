@@ -116,28 +116,34 @@ class DistortionVisualizer:
     import scipy.interpolate
 
     def _plot_heatmap(self, X, Y, U, V):
-        """ Plot the heatmap using plt.imshow"""
-        buffer = st.session_state['buffer']
+        """
+        The problem is that the plot sometimes we want the outside to bleed in, but the color bar needs to adjust for the
+        scale only within the rectangle because the data outside doesn't matter.
 
+        Fix:
+        1. Filter to get the data within the whole plot
+        2. Interpolate the data to get a grid
+        """
+        buffer = st.session_state['buffer']
+        total_width = self.width * (1 + buffer)
+        total_height = self.height * (1 + buffer)
         width_right_bound = self.width + self.width * buffer
         width_left_bound = 0 - self.width * buffer
         height_upper_bound = self.height + self.height * buffer
         height_lower_bound = 0 - self.height * buffer
 
-        visible = (X > width_left_bound) & (X < width_right_bound)
+        visible = (X > width_left_bound) & (X < width_right_bound) # Only points within the rectangle (defined by res)
         visible &= (Y > height_lower_bound) & (Y < height_upper_bound)
 
         X = X[visible]
         Y = Y[visible]
-        # st.write(X.shape)
+
         displacement = np.sqrt(U ** 2 + V ** 2)
         displacement = displacement[visible]
-        #
-        # Create a grid for interpolation
-        xi, yi = np.linspace(min(X.min(), 0), max(X.max(), self.width), 1000), np.linspace(Y.min(), Y.max(), 1000)
-        xi, yi = np.meshgrid(xi, yi)
 
-        # Now that we have a
+        # Create a grid for interpolation, hard coded to 1000 points
+        xi, yi = np.linspace(width_left_bound, width_right_bound, 1000), np.linspace(height_lower_bound, height_upper_bound, 1000)
+        xi, yi = np.meshgrid(xi, yi)
 
         # Use Rbf if sphere, otherwise use griddata interpolation
         if st.session_state['3d_shape'] == 'Fibonacci Sphere':
@@ -146,7 +152,16 @@ class DistortionVisualizer:
         else:
             zi = scipy.interpolate.griddata((X, Y), displacement, (xi, yi), method='cubic')
 
-        plt.imshow(zi, interpolation='nearest', cmap="magma", extent=[0, self.width, 0, self.height], origin='lower')
+        # Need to filter out the zi points that are outside 0, self.width, 0, self.height
+        zi_visible = np.where((xi > 0) & (xi < self.width) & (yi > 0) & (yi < self.height), zi, np.nan)
+        valid_min = np.nanmin(zi_visible)
+        valid_max = np.nanmax(zi_visible)
+
+        st.write(xi.shape)
+        st.write(xi)
+
+        plt.imshow(zi, interpolation='nearest', cmap="magma", extent=[width_left_bound, width_right_bound, height_lower_bound, height_upper_bound], origin='lower', vmin=valid_min, vmax=valid_max)
+        plt.axis([0, self.width, 0, self.height])
         plt.colorbar()
         st.pyplot(plt)
 
