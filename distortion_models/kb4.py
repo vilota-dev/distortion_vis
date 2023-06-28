@@ -21,7 +21,7 @@ class KB4(Pinhole):
 
         r = np.sqrt(x ** 2 + y ** 2)
 
-        theta = np.arctan(r / z)
+        theta = np.arctan2(r, z)
         theta_distorted = theta + self.k1 * theta ** 3 + self.k2 * theta ** 5 + \
                           self.k3 * theta ** 7 + self.k4 * theta ** 9
 
