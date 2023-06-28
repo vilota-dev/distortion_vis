@@ -32,6 +32,12 @@ def main():
     else:
         num_points = st.sidebar.slider("Point Density", 20, 100, 10, key='num_points')  # Not retrieved from JSON so no need to save state
 
+    # FOV Controls
+    st.sidebar.divider()
+    st.sidebar.subheader("FOV Controls")
+    st.sidebar.slider("FOV (degrees)", 0, 360, 90, key='fov')
+
+
     # ------------------ Main page Placeholders ------------------ #
     title_placeholder = st.empty()
 

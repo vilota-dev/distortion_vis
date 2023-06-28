@@ -6,6 +6,7 @@ import torch
 from matplotlib.patches import Rectangle
 import pandas as pd
 import scipy
+from widgets import *
 
 class DistortionVisualizer:
     def __init__(self, width, height, num_points, model, pinhole_model):
@@ -69,6 +70,36 @@ class DistortionVisualizer:
         points_3D = points_3D[points_3D[:, 2] != 0]
         return points_3D
 
+    def _create_unit_circle(self):
+        samples = st.session_state['num_points']
+        fov = st.session_state['fov']
+
+        if fov < 180:
+            radius = np.tan(np.deg2rad(fov / 2))
+
+            # Generate unit circle of radius 1 at z = 1
+            theta = np.linspace(0, 2 * np.pi, samples)
+            x = radius * np.cos(theta)
+            y = radius * np.sin(theta)
+            z = np.ones(samples)
+
+        elif fov == 180:
+            theta = np.linspace(0, 2 * np.pi, samples)
+            x = np.cos(theta)
+            y = np.sin(theta)
+            z = np.zeros(samples)
+        else:
+            angle = 90 - ((180 - fov) / 2)
+            radius = np.tan(np.deg2rad(angle))
+
+            theta = np.linspace(0, 2 * np.pi, samples)
+            x = radius * np.cos(theta)
+            y = radius * np.sin(theta)
+            z = -1 * np.ones(samples)
+
+        points_3D = np.column_stack((x, y, z))
+        return points_3D
+
     @staticmethod
     def _calculate_displacement_vectors(X, Y, X_distorted, Y_distorted):
         """ Calculate the displacement vectors between the distorted and undistorted points."""
@@ -88,7 +119,7 @@ class DistortionVisualizer:
 
         return azimuth_deg, polar_deg
 
-    def _plot_quiver(self, X, Y, X_distorted, Y_distorted, U, V):
+    def _plot_quiver(self, X, Y, X_distorted, Y_distorted, U, V, distorted_fov, x_fov, y_fov):
         """ Plot the displacement vectors. """
         plt.figure(figsize=(10, 5))
 
@@ -103,8 +134,14 @@ class DistortionVisualizer:
         if not st.session_state['hide_distorted_points']:
             plt.scatter(X_distorted, Y_distorted, s=10, marker='.', color='red', label='Distorted Points')
 
+        # FOV related stuff
+        plt.scatter(distorted_fov[:, 0], distorted_fov[:, 1], s=1, marker='.', color='orange', label='Distorted FOV')
+        plt.scatter(x_fov, y_fov, s=1, marker='.', color='purple', label='Pinhole FOV')
+
         # Draw a rectangle at 0 to self.width and 0 to self.height
         plt.gca().add_patch(Rectangle((0, 0), self.width, self.height, linewidth=1, edgecolor='black', facecolor='none'))
+
+        # Need to add in the FOV here.
 
         plt.legend()
         plt.title("Quiver Plot of Distortion Model: {}".format(self.model))
@@ -112,8 +149,6 @@ class DistortionVisualizer:
         buffer = st.session_state['buffer']
         plt.axis([0 - self.width * buffer, self.width * (1 + buffer), 0 - self.width * buffer, self.height * (1 + buffer)])
         st.pyplot(plt)
-
-    import scipy.interpolate
 
     def _plot_heatmap(self, X, Y, U, V):
         """
@@ -156,9 +191,6 @@ class DistortionVisualizer:
         zi_visible = np.where((xi > 0) & (xi < self.width) & (yi > 0) & (yi < self.height), zi, np.nan)
         valid_min = np.nanmin(zi_visible)
         valid_max = np.nanmax(zi_visible)
-
-        st.write(xi.shape)
-        st.write(xi)
 
         plt.imshow(zi, interpolation='nearest', cmap="magma", extent=[width_left_bound, width_right_bound, height_lower_bound, height_upper_bound], origin='lower', vmin=valid_min, vmax=valid_max)
         plt.axis([0, self.width, 0, self.height])
@@ -263,15 +295,21 @@ class DistortionVisualizer:
         else:
             generated_points = self.create_3D_cube_surface()
 
+        generated_circle = self._create_unit_circle()
+
         self._plot_3D(generated_points)
 
         azimuth, polar = self._calc_angles(generated_points)
 
         # Use the distortion model's method to convert the 3D points to 2D points
         distorted_points, valid_distorted = self.model.project(torch.tensor(generated_points, dtype=torch.float))
+        distorted_fov, valid_fov = self.model.project(torch.tensor(generated_circle, dtype=torch.float))
+
+        # Since now you have the distorted circle points, you need to calculate the width of the
 
         # Pinhole model
         x_original, y_original, valid_original = self.pinhole_model.project(generated_points)
+        x_fov, y_fov, valid_fov = self.pinhole_model.project(generated_circle)
 
         # valid_both refers to points that are valid in both the pinhole and distortion model
         # so FOV is taken into account for both models
@@ -283,7 +321,7 @@ class DistortionVisualizer:
         # Calculate the displacement vectors between the distorted and undistorted points (from pinhole model)
         U, V = self._calculate_displacement_vectors(x_original[valid_both], y_original[valid_both], distorted_points[valid_both, 0], distorted_points[valid_both, 1])
         self._plot_heatmap(x_original[valid_original], y_original[valid_original], U, V)
-        self._plot_quiver(x_original[valid_original], y_original[valid_original], distorted_points[valid_distorted, 0], distorted_points[valid_distorted, 1], U, V)
+        self._plot_quiver(x_original[valid_original], y_original[valid_original], distorted_points[valid_distorted, 0], distorted_points[valid_distorted, 1], U, V, distorted_fov, x_fov, y_fov)
 
         self._plot_histogram(x_original[valid_both], y_original[valid_both], U, V)
         self._plot_statistics(azimuth, polar, x_original[valid_both], y_original[valid_both], U, V)
