@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import plotly.graph_objects as go
 import streamlit as st
-import torch
 from matplotlib.patches import Rectangle
 import pandas as pd
 import scipy
@@ -207,7 +206,7 @@ class DistortionVisualizer:
         euclidean_distance = np.sqrt(U ** 2 + V ** 2)
         euclidean_distance = euclidean_distance[visible]
 
-        bins = np.arange(0, torch.max(euclidean_distance), 0.1)
+        bins = np.arange(0, np.max(euclidean_distance), 0.1)
 
         plt.figure(figsize=(10, 5))
         plt.hist(euclidean_distance, bins=bins, color='red', alpha=0.5)
@@ -302,8 +301,8 @@ class DistortionVisualizer:
         azimuth, polar = self._calc_angles(generated_points)
 
         # Use the distortion model's method to convert the 3D points to 2D points
-        distorted_points, valid_distorted = self.model.project(torch.tensor(generated_points, dtype=torch.float))
-        distorted_fov, valid_fov = self.model.project(torch.tensor(generated_circle, dtype=torch.float))
+        distorted_points, valid_distorted = self.model.project(generated_points)
+        distorted_fov, valid_fov = self.model.project(generated_circle)
 
         # Since now you have the distorted circle points, you need to calculate the width of the
 
@@ -313,7 +312,7 @@ class DistortionVisualizer:
 
         # valid_both refers to points that are valid in both the pinhole and distortion model
         # so FOV is taken into account for both models
-        valid_both = valid_distorted.numpy() & valid_original
+        valid_both = valid_distorted & valid_original
 
         azimuth = azimuth[valid_both]
         polar = polar[valid_both]

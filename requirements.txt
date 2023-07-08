@@ -1,7 +1,6 @@
 matplotlib
 streamlit
 numpy
-torch
 plotly
 pandas
 scipy

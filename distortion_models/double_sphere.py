@@ -1,6 +1,6 @@
 from .pinhole import Pinhole
 import numpy as np
-import torch
+import numpy as np
 
 
 class DoubleSphere:
@@ -23,15 +23,15 @@ class DoubleSphere:
         polar_angle = np.arctan2(np.sqrt(x**2 + y**2), z)
         valid = np.abs(polar_angle) < np.deg2rad(self.fov_ds / 2)
 
-        d1 = torch.sqrt(x ** 2 + y ** 2 + z ** 2)
-        d2 = torch.sqrt(x ** 2 + y ** 2 + (self.xi * d1 + z) ** 2)
+        d1 = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+        d2 = np.sqrt(x ** 2 + y ** 2 + (self.xi * d1 + z) ** 2)
 
         denominator = self.alpha * d2 + (1 - self.alpha) * (self.xi * d1 + z)
 
         u = self.fx * x / denominator + self.cx
         v = self.fy * y / denominator + self.cy
 
-        return torch.hstack((u.reshape(-1, 1), v.reshape(-1, 1))), valid
+        return np.hstack((u.reshape(-1, 1), v.reshape(-1, 1))), valid
 
     def cam2world(self, points_2D):
         u, v = points_2D.T
@@ -40,17 +40,17 @@ class DoubleSphere:
         my = (v - self.cy) / self.fy
         r_2 = mx ** 2 + my ** 2
         mz = (1 - (self.alpha ** 2) * r_2) / \
-             (self.alpha * torch.sqrt(1 - (2 * self.alpha - 1) * r_2) +
+             (self.alpha * np.sqrt(1 - (2 * self.alpha - 1) * r_2) +
               (1 - self.alpha))
 
         coefficient = (mz * self.xi +
-                       torch.sqrt(mz ** 2 + (1 - self.xi ** 2) * r_2)) / \
+                       np.sqrt(mz ** 2 + (1 - self.xi ** 2) * r_2)) / \
                       (mz ** 2 + r_2)
 
         x = coefficient * mx
         y = coefficient * my
         z = coefficient * mz - self.xi
 
-        return torch.hstack((x.reshape(-1, 1),
+        return np.hstack((x.reshape(-1, 1),
                              y.reshape(-1, 1),
                              z.reshape(-1, 1)))

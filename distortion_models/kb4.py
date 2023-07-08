@@ -1,6 +1,5 @@
 from .pinhole import Pinhole
 import numpy as np
-import torch
 
 
 class KB4(Pinhole):
@@ -28,7 +27,7 @@ class KB4(Pinhole):
         u = self.fx * theta_distorted * x / r + self.cx
         v = self.fy * theta_distorted * y / r + self.cy
 
-        return torch.hstack((u.reshape(-1, 1), v.reshape(-1, 1))), valid
+        return np.hstack((u.reshape(-1, 1), v.reshape(-1, 1))), valid
 
     def cam2world(self, points_2D):
         u, v = points_2D.T
@@ -36,6 +35,6 @@ class KB4(Pinhole):
         mx = (u - self.cx) / self.fx
         my = (v - self.cy) / self.fy
 
-        ru = torch.sqrt(mx ** 2 + my ** 2)
+        ru = np.sqrt(mx ** 2 + my ** 2)
 
         theta = ru

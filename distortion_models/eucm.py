@@ -1,5 +1,4 @@
 from .pinhole import Pinhole
-import torch
 import numpy as np
 
 class EUCM(Pinhole):
@@ -18,13 +17,13 @@ class EUCM(Pinhole):
         polar_angle = np.arctan2(np.sqrt(x**2 + y**2), z)
         valid = np.abs(polar_angle) < np.deg2rad(self.fov / 2)
 
-        d = torch.sqrt(self.beta * (x ** 2 + y ** 2) + z ** 2)
+        d = np.sqrt(self.beta * (x ** 2 + y ** 2) + z ** 2)
         denominator = self.alpha * d + (1 - self.alpha) * z
 
         u = self.fx * x / denominator + self.cx
         v = self.fy * y / denominator + self.cy
 
-        return torch.hstack((u.reshape(-1, 1), v.reshape(-1, 1))), valid
+        return np.hstack((u.reshape(-1, 1), v.reshape(-1, 1))), valid
 
     def cam2world(self, points_2D):
         u, v = points_2D.T
@@ -35,15 +34,15 @@ class EUCM(Pinhole):
         r_2 = mx ** 2 + my ** 2
 
         mz = (1 - self.beta * (self.alpha ** 2) * (r_2 ** 2)) / \
-                (self.alpha * torch.sqrt(1 - (2 * self.alpha - 1) * self.beta * r_2) +
+                (self.alpha * np.sqrt(1 - (2 * self.alpha - 1) * self.beta * r_2) +
                     (1 - self.alpha))
 
-        coefficient = 1 / torch.sqrt(mx ** 2 + my ** 2 + mz ** 2)
+        coefficient = 1 / np.sqrt(mx ** 2 + my ** 2 + mz ** 2)
 
         x = coefficient * mx
         y = coefficient * my
         z = coefficient * mz
 
-        return torch.hstack((x.reshape(-1, 1),
+        return np.hstack((x.reshape(-1, 1),
                              y.reshape(-1, 1),
                              z.reshape(-1, 1)))

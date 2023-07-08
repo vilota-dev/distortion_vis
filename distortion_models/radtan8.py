@@ -1,7 +1,5 @@
 from .pinhole import Pinhole
 import numpy as np
-import torch
-
 
 class RadTan8(Pinhole):
     def __init__(self, fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, k5, k6, rpmax):
@@ -34,7 +32,7 @@ class RadTan8(Pinhole):
 
         u = self.fx * xpp + self.cx
         v = self.fy * ypp + self.cy
-        return torch.hstack((u.reshape(-1, 1), v.reshape(-1, 1))), valid
+        return np.hstack((u.reshape(-1, 1), v.reshape(-1, 1))), valid
 
     def cam2world(self, points_2D):
         raise NotImplementedError
