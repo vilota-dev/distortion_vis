@@ -46,9 +46,6 @@ class DistortionVisualizer:
 
         points_3D = np.array(surface_points)
 
-        # filter out points that are z = 0
-        points_3D = points_3D[points_3D[:, 2] != 0]
-
         return points_3D
 
     def _create_fibonacci_sphere(self):
@@ -65,8 +62,7 @@ class DistortionVisualizer:
         z = np.sin(theta) * radius
 
         points_3D = np.column_stack((x, y, z))
-        # filter out points that are z = 0
-        points_3D = points_3D[points_3D[:, 2] != 0]
+
         return points_3D
 
     def _create_unit_circle(self):

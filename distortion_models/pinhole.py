@@ -16,8 +16,12 @@ class Pinhole:
         polar_angle = np.arctan2(np.sqrt(x**2 + y**2), z)
         valid = np.abs(polar_angle) < np.deg2rad(self.fov / 2)
 
-        x_projected = self.fx * x / z + self.cx
-        y_projected = self.fy * y / z + self.cy
+        # z value may contain zero
+        x_projected = np.zeros(x.shape)
+        y_projected = np.zeros(y.shape)
+
+        x_projected[valid] = self.fx * x[valid] / z[valid] + self.cx
+        y_projected[valid] = self.fy * y[valid] / z[valid] + self.cy
 
         return x_projected, y_projected, valid
 
