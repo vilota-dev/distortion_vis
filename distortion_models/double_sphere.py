@@ -8,14 +8,14 @@ class DoubleSphere:
         self.fx, self.fy = fx, fy
         self.cx, self.cy = cx, cy
         self.xi, self.alpha = xi, alpha
-        self.fov_ds = 180
+        self.fov_ds = 220
 
         # fix the ds model scaling on focal length, to match the equivalent pinhole model
         fx_adj = fx / (1 + xi)
         fy_adj = fy / (1 + xi)
 
     def __str__(self):
-        return "Double Sphere (ds)"
+        return "ds"
 
     def project(self, points):
         x, y, z = points.T
