@@ -8,12 +8,12 @@ import scipy
 from widgets import *
 
 class DistortionVisualizer:
-    def __init__(self, width, height, num_points, model, pinhole_model):
+    def __init__(self, width, height, num_points, model_a, model_b):
         self.width = width
         self.height = height
         self.num_points = num_points
-        self.model = model
-        self.pinhole_model = pinhole_model
+        self.model_a = model_a
+        self.model_b = model_b
 
     def _create_grid(self):
         """ Create a grid of points."""
@@ -23,8 +23,8 @@ class DistortionVisualizer:
         return X, Y
 
     def create_3D_cube_surface(self):
-        x = np.linspace((-self.width / self.model.fx) / 2, (self.width / self.model.fx) / 2, self.num_points)
-        y = np.linspace((-self.height / self.model.fy) / 2, (self.height / self.model.fy) / 2, self.num_points)
+        x = np.linspace((-self.width / self.model_a.fx) / 2, (self.width / self.model_a.fx) / 2, self.num_points)
+        y = np.linspace((-self.height / self.model_a.fy) / 2, (self.height / self.model_a.fy) / 2, self.num_points)
         z = np.linspace(-1, 1, self.num_points)  # Generate a range of z values
 
         # Create empty list to store surface points
@@ -96,10 +96,10 @@ class DistortionVisualizer:
         return points_3D
 
     @staticmethod
-    def _calculate_displacement_vectors(X, Y, X_distorted, Y_distorted):
+    def _calculate_displacement_vectors(Xa, Ya, Xb, Yb):
         """ Calculate the displacement vectors between the distorted and undistorted points."""
-        U = X_distorted - X
-        V = Y_distorted - Y
+        U = Xb - Xa
+        V = Yb - Ya
         return U, V
 
     def _calc_angles(self, points_3D):
@@ -114,24 +114,24 @@ class DistortionVisualizer:
 
         return azimuth_deg, polar_deg
 
-    def _plot_quiver(self, X, Y, X_distorted, Y_distorted, U, V, distorted_fov, x_fov, y_fov):
+    def _plot_quiver(self, Xa, Ya, Xb, Yb, U, V, fova, fovb):
         """ Plot the displacement vectors. """
         plt.figure(figsize=(10, 5))
 
-        plt.scatter(self.model.cx, self.model.cy, s=4, marker='o', color='green', label='Center Point')
-        plt.plot([self.model.cx, self.model.cx], [0, self.model.cy], 'g--', linewidth=0.5)
-        plt.plot([0, self.model.cx], [self.model.cy, self.model.cy], 'g--', linewidth=0.5)
+        plt.scatter(self.model_a.cx, self.model_a.cy, s=4, marker='o', color='green', label='Center Point A')
+        plt.plot([self.model_a.cx, self.model_a.cx], [0, self.model_a.cy], 'g--', linewidth=0.5)
+        plt.plot([0, self.model_a.cx], [self.model_a.cy, self.model_a.cy], 'g--', linewidth=0.5)
 
         if not st.session_state['hide_displacement_vectors']:
-            plt.quiver(X, Y, U, V, angles='xy', scale_units='xy', scale=1, width=0.002, color='r', alpha=0.5)
-        if not st.session_state['hide_pinhole_points']:
-            plt.scatter(X, Y, s=10, marker='.', color='blue', label='Original Points')
-        if not st.session_state['hide_distorted_points']:
-            plt.scatter(X_distorted, Y_distorted, s=10, marker='.', color='red', label='Distorted Points')
+            plt.quiver(Xa, Ya, U, V, angles='xy', scale_units='xy', scale=1, width=0.002, color='r', alpha=0.5)
+        if not st.session_state['hide_model_a']:
+            plt.scatter(Xa, Ya, s=10, marker='.', color='blue', label='Model A Points')
+        if not st.session_state['hide_model_b']:
+            plt.scatter(Xb, Yb, s=10, marker='.', color='red', label='Model B Points')
 
         # FOV related stuff
-        plt.scatter(distorted_fov[:, 0], distorted_fov[:, 1], s=1, marker='.', color='orange', label='Distorted FOV')
-        plt.scatter(x_fov, y_fov, s=1, marker='.', color='purple', label='Pinhole FOV')
+        plt.scatter(fovb[:, 0], fovb[:, 1], s=1, marker='.', color='orange', label='Model B FOV')
+        plt.scatter(fova[:, 0], fova[:, 1], s=1, marker='.', color='purple', label='Model A FOV')
 
         # Draw a rectangle at 0 to self.width and 0 to self.height
         plt.gca().add_patch(Rectangle((0, 0), self.width, self.height, linewidth=1, edgecolor='black', facecolor='none'))
@@ -139,7 +139,7 @@ class DistortionVisualizer:
         # Need to add in the FOV here.
 
         plt.legend()
-        plt.title("Quiver Plot of Distortion Model: {}".format(self.model))
+        plt.title("Models: {} and {}".format(self.model_a, self.model_b))
         plt.gca().set_aspect('equal', adjustable='box')
         buffer = st.session_state['buffer']
         plt.axis([0 - self.width * buffer, self.width * (1 + buffer), 0 - self.width * buffer, self.height * (1 + buffer)])
@@ -192,23 +192,22 @@ class DistortionVisualizer:
         plt.colorbar()
         st.pyplot(plt)
 
-    def _plot_histogram(self, x_original, y_original, U, V):
+    def _plot_histogram(self, x_original, y_original, U, V, cx, cy):
         current_width = self.width
         current_height = self.height
 
         visible = (x_original > 0) & (x_original < current_width)
         visible &= (y_original > 0) & (y_original < current_height)
 
-        euclidean_distance = np.sqrt(U ** 2 + V ** 2)
-        euclidean_distance = euclidean_distance[visible]
+        euclidean_distance = np.sqrt(U[visible] ** 2 + V[visible] ** 2)
 
-        bins = np.arange(0, np.max(euclidean_distance), 0.1)
+        polar_pixel = np.sqrt((x_original[visible] - cx) ** 2 + (y_original[visible] - cy) ** 2)
 
         plt.figure(figsize=(10, 5))
-        plt.hist(euclidean_distance, bins=bins, color='red', alpha=0.5)
-        plt.title('Histogram of Displacement Vectors')
-        plt.xlabel('Euclidean Distance (pixels)')
-        plt.ylabel('Frequency')
+        plt.scatter(polar_pixel, euclidean_distance)
+        plt.title('Polar Displacement Graph')
+        plt.xlabel('Polar distance (pixels)')
+        plt.ylabel('Euclidean Distance in Difference')
 
         st.pyplot(plt)
 
@@ -297,26 +296,26 @@ class DistortionVisualizer:
         azimuth, polar = self._calc_angles(generated_points)
 
         # Use the distortion model's method to convert the 3D points to 2D points
-        distorted_points, valid_distorted = self.model.project(generated_points)
-        distorted_fov, valid_fov = self.model.project(generated_circle)
+        a_points, valid_a = self.model_a.project(generated_points)
+        a_fov, _ = self.model_a.project(generated_circle)
 
         # Since now you have the distorted circle points, you need to calculate the width of the
 
         # Pinhole model
-        x_original, y_original, valid_original = self.pinhole_model.project(generated_points)
-        x_fov, y_fov, valid_fov = self.pinhole_model.project(generated_circle)
+        b_points, valid_b = self.model_b.project(generated_points)
+        b_fov, _ = self.model_b.project(generated_circle)
 
         # valid_both refers to points that are valid in both the pinhole and distortion model
         # so FOV is taken into account for both models
-        valid_both = valid_distorted & valid_original
+        valid_both = valid_a & valid_b
 
         azimuth = azimuth[valid_both]
         polar = polar[valid_both]
 
         # Calculate the displacement vectors between the distorted and undistorted points (from pinhole model)
-        U, V = self._calculate_displacement_vectors(x_original[valid_both], y_original[valid_both], distorted_points[valid_both, 0], distorted_points[valid_both, 1])
-        self._plot_heatmap(x_original[valid_original], y_original[valid_original], U, V)
-        self._plot_quiver(x_original[valid_original], y_original[valid_original], distorted_points[valid_distorted, 0], distorted_points[valid_distorted, 1], U, V, distorted_fov, x_fov, y_fov)
+        U, V = self._calculate_displacement_vectors(a_points[valid_both, 0], a_points[valid_both, 1], b_points[valid_both, 0], b_points[valid_both, 1])
+        self._plot_heatmap(a_points[valid_both, 0], a_points[valid_both, 1], U, V)
+        self._plot_quiver(a_points[valid_both, 0], a_points[valid_both, 1], b_points[valid_both, 0], b_points[valid_both, 1], U, V, a_fov, b_fov)
 
-        self._plot_histogram(x_original[valid_both], y_original[valid_both], U, V)
-        self._plot_statistics(azimuth, polar, x_original[valid_both], y_original[valid_both], U, V)
+        self._plot_histogram(a_points[valid_both, 0], a_points[valid_both, 1], U, V, self.model_a.cx, self.model_a.cy)
+        self._plot_statistics(azimuth, polar, a_points[valid_both, 0], a_points[valid_both, 1], U, V)

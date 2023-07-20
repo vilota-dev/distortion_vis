@@ -2,21 +2,21 @@ from .pinhole import Pinhole
 import numpy as np
 
 
-class KB4(Pinhole):
+class KB4:
     def __init__(self, fx, fy, cx, cy, k1, k2, k3, k4):
         self.fx, self.fy = fx, fy
         self.cx, self.cy = cx, cy
         self.k1, self.k2, self.k3, self.k4 = k1, k2, k3, k4
-        self.fov_kb4 = 180
+        self.fov = 220
 
     def __str__(self):
-        return "Kannala Brandt 4 (kb4)"
+        return "kb4"
 
     def project(self, points):
         x, y, z = points.T
 
         polar_angle = np.arctan2(np.sqrt(x**2 + y**2), z)
-        valid = np.abs(polar_angle) < np.deg2rad(self.fov_kb4 / 2)
+        valid = np.abs(polar_angle) < np.deg2rad(self.fov / 2)
 
         r = np.sqrt(x ** 2 + y ** 2)
 

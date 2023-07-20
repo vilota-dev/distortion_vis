@@ -1,15 +1,15 @@
 from .pinhole import Pinhole
 import numpy as np
 
-class EUCM(Pinhole):
-    def __init__(self, fx, fy, cx, cy, alpha, beta):
+class EUCM:
+    def __init__(self, fx, fy, cx, cy, alpha, beta, fov = 220):
         self.fx, self.fy = fx, fy
         self.cx, self.cy = cx, cy
         self.alpha, self.beta = alpha, beta
-        self.fov_eucm = 180
+        self.fov = fov
 
     def __str__(self):
-        return "Extended Unified Camera Model (eucm)"
+        return "eucm"
 
     def project(self, points):
         x, y, z = points.T

@@ -3,7 +3,10 @@ import numpy as np
 class Pinhole:
     def __init__(self, fx, fy, cx, cy):
         self.fx, self.fy, self.cx, self.cy = fx, fy, cx, cy
-        self.fov = 179
+        self.fov = 150
+
+    def __str__(self):
+        return "pinhole"
 
     def project(self, points_3D):
         """ Use FOV to reject invalid points """
@@ -17,13 +20,13 @@ class Pinhole:
         valid = np.abs(polar_angle) < np.deg2rad(self.fov / 2)
 
         # z value may contain zero
-        x_projected = np.zeros(x.shape)
-        y_projected = np.zeros(y.shape)
+        x_projected = np.zeros(x.shape[0])
+        y_projected = np.zeros(y.shape[0])
 
         x_projected[valid] = self.fx * x[valid] / z[valid] + self.cx
         y_projected[valid] = self.fy * y[valid] / z[valid] + self.cy
 
-        return x_projected, y_projected, valid
+        return np.hstack((x_projected.reshape(-1, 1), y_projected.reshape(-1, 1))) , valid
 
     def unproject(self, points_2D):
         """ Instead of arbitrarily generated a grid of 3D points, we can generate a 2D grid with the resolution given,
