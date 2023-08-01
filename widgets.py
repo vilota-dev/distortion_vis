@@ -33,44 +33,44 @@ def draw_pinhole_config(data, i):
     return fx, fy, cx, cy
 
 
-def draw_kb4_config(data):
+def draw_kb4_config(data, i):
     temp = data['value0']['intrinsics'][get_selected_camera_idx(data)]['intrinsics']
 
-    with st.form(key="kb4_form"):
-        fx, fy, cx, cy = draw_pinhole_config(data)
+    fx, fy, cx, cy = draw_pinhole_config(data, i)
 
-        c1, c2, c3, c4 = st.columns(4)
-        k1 = c1.number_input('k1', step=1e-8, format="%.8f", value=temp['k1'])
-        k2 = c2.number_input('k2', step=1e-8, format="%.8f", value=temp['k2'])
-        k3 = c3.number_input('k3', step=1e-8, format="%.8f", value=temp['k3'])
-        k4 = c4.number_input('k4', step=1e-8, format="%.8f", value=temp['k4'])
-
-        submitted = st.form_submit_button("Update Model")
-
-        return submitted, fx, fy, cx, cy, k1, k2, k3, k4
-
-
-def draw_ds_config():
-    temp = st.session_state['data']['value0']['intrinsics'][get_selected_camera_idx()]['intrinsics']
-    c1, c2 = st.columns(2)
-    xi = c1.number_input('xi', step=0.01, format="%.8f", value=temp['xi'])
-    alpha = c2.number_input('alpha', step=0.01, format="%.8f", value=temp['alpha'])
-
-    return xi, alpha
-
-
-def draw_radtan8_config():
-    temp = st.session_state['data']['value0']['intrinsics'][get_selected_camera_idx()]['intrinsics']
     c1, c2, c3, c4 = st.columns(4)
-    k1 = c1.number_input('k1', step=1e-8, format="%.8f", value=temp['k1'])
-    k2 = c2.number_input('k2', step=1e-8, format="%.8f", value=temp['k2'])
-    k3 = c3.number_input('k3', step=1e-8, format="%.8f", value=temp['k3'])
-    k4 = c4.number_input('k4', step=1e-8, format="%.8f", value=temp['k4'])
-    k5 = c1.number_input('k5', step=1e-8, format="%.8f", value=temp['k5'])
-    k6 = c2.number_input('k6', step=1e-8, format="%.8f", value=temp['k6'])
-    p1 = c3.number_input('p1', step=1e-8, format="%.8f", value=temp['p1'])
-    p2 = c4.number_input('p2', step=1e-8, format="%.8f", value=temp['p2'])
-    rpmax = c1.number_input('rpmax', step=1e-6, format="%.6f", value=temp['rpmax'])
+    k1 = c1.number_input('k1' + str(i), step=1e-8, format="%.8f", value=temp['k1'])
+    k2 = c2.number_input('k2' + str(i), step=1e-8, format="%.8f", value=temp['k2'])
+    k3 = c3.number_input('k3' + str(i), step=1e-8, format="%.8f", value=temp['k3'])
+    k4 = c4.number_input('k4' + str(i), step=1e-8, format="%.8f", value=temp['k4'])
+
+    return fx, fy, cx, cy, k1, k2, k3, k4
+
+
+def draw_ds_config(data, i):
+    temp = data['value0']['intrinsics'][get_selected_camera_idx(data)]['intrinsics']
+
+    fx, fy, cx, cy = draw_pinhole_config(data, i)
+
+    c1, c2 = st.columns(2)
+    xi = c1.number_input('xi' + str(i), step=0.01, format="%.8f", value=temp['xi'])
+    alpha = c2.number_input('alpha' + str(i), step=0.01, format="%.8f", value=temp['alpha'])
+
+    return fx, fy, cx, cy, xi, alpha
+
+
+def draw_radtan8_config(data, i):
+    temp = data['value0']['intrinsics'][get_selected_camera_idx(data)]['intrinsics']
+    c1, c2, c3, c4 = st.columns(4)
+    k1 = c1.number_input('k1' + str(i), step=1e-8, format="%.8f", value=temp['k1'])
+    k2 = c2.number_input('k2' + str(i), step=1e-8, format="%.8f", value=temp['k2'])
+    k3 = c3.number_input('k3' + str(i), step=1e-8, format="%.8f", value=temp['k3'])
+    k4 = c4.number_input('k4' + str(i), step=1e-8, format="%.8f", value=temp['k4'])
+    k5 = c1.number_input('k5' + str(i), step=1e-8, format="%.8f", value=temp['k5'])
+    k6 = c2.number_input('k6' + str(i), step=1e-8, format="%.8f", value=temp['k6'])
+    p1 = c3.number_input('p1' + str(i), step=1e-8, format="%.8f", value=temp['p1'])
+    p2 = c4.number_input('p2' + str(i), step=1e-8, format="%.8f", value=temp['p2'])
+    rpmax = c1.number_input('rpmax' + str(i), step=1e-6, format="%.6f", value=temp['rpmax'])
 
     return k1, k2, k3, k4, k5, k6, p1, p2, rpmax
 
