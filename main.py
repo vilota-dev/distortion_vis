@@ -102,18 +102,15 @@ def main():
 
                         
                     elif selected_model == "kb4":
-                        submitted, fx, fy, cx, cy, k1, k2, k3, k4 = draw_kb4_config()
-
-                        if submitted:
-                            model = KB4(fx, fy, cx, cy, k1, k2, k3, k4)
-                            reference_model = KB4(fx, fy, cx, cy, k1 + 0.01, k2, k3, k4)
+                        fx, fy, cx, cy, k1, k2, k3, k4 = draw_kb4_config(data, i)
+                        model = KB4(fx, fy, cx, cy, k1, k2, k3, k4)
 
                     elif selected_model == 'ds':
-                        xi, alpha = draw_ds_config()
+                        fx, fy, cx, cy, xi, alpha = draw_ds_config(data, i)
                         model = DoubleSphere(fx, fy, cx, cy, xi, alpha)
 
                     elif selected_model == "pinhole-radtan8":
-                        k1, k2, k3, k4, k5, k6, p1, p2, rpmax = draw_radtan8_config()
+                        k1, k2, k3, k4, k5, k6, p1, p2, rpmax = draw_radtan8_config(data, i)
                         model = RadTan8(fx, fy, cx, cy, k1, k2, p1, p2, k3, k4, k5, k6, rpmax)
 
                     elif selected_model == 'eucm':
