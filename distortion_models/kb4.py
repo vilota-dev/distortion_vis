@@ -1,4 +1,3 @@
-from .pinhole import Pinhole
 import numpy as np
 
 
@@ -24,8 +23,11 @@ class KB4:
         theta_distorted = theta + self.k1 * theta ** 3 + self.k2 * theta ** 5 + \
                           self.k3 * theta ** 7 + self.k4 * theta ** 9
 
-        u = self.fx * theta_distorted * x / r + self.cx
-        v = self.fy * theta_distorted * y / r + self.cy
+        # trick to bypass devide by zero
+        u = self.fx * theta_distorted * x / (r + x==0) + self.cx
+        u[x==0] = self.cx
+        v = self.fy * theta_distorted * y / (r + y==0) + self.cy
+        v[y==0] = self.cy
 
         return np.hstack((u.reshape(-1, 1), v.reshape(-1, 1))), valid
 

@@ -1,4 +1,3 @@
-from .pinhole import Pinhole
 import numpy as np
 
 class EUCM:

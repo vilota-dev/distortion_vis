@@ -1,6 +1,7 @@
 import streamlit as st
 from distortion_models import *
 import visualiser
+import distortion_fit
 import json
 
 from widgets import *
@@ -85,6 +86,8 @@ def main():
         data_names = ['data_a', 'data_b']
 
         with st.form(key="models_form"):
+
+            print("runed!")
             # cols = st.rows(2)
             for i in range(2):
                 # with cols[i]:
@@ -99,6 +102,7 @@ def main():
                     if selected_model == "pinhole":
                         fx, fy, cx, cy = draw_pinhole_config(data, i)
                         model = Pinhole(fx, fy, cx, cy)
+                    
 
                         
                     elif selected_model == "kb4":
@@ -128,6 +132,10 @@ def main():
 
             models_form_submitted = st.form_submit_button("Update Distortion Params")
 
+        # detailed comparison analysis
+
+        st.info(models[0] is None)
+
         if models_form_submitted:
             # st.info("submitted")
         
@@ -144,6 +152,14 @@ def main():
             viz = visualiser.DistortionVisualizer(width, height, num_points=num_points, model_a=models[0], model_b=models[1])
 
             viz.visualize_distortion()
+            
+            st.slider("test", min_value=-1, max_value=1, value=0, key="slider_test")
+
+        
+        # parameter play
+
+        # fit = distortion_fit.draw_r_theta_curve(models[0])
+        
 
 
 if __name__ == '__main__':
