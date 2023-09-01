@@ -18,5 +18,7 @@ def get_camera_from_dict(params, fov = 179):
     elif type == "eucm":
         return EUCM(intr['fx'], intr['fy'], intr['cx'], intr['cy'], 
                     intr['alpha'], intr['beta'], fov)
+    elif type == "pinhole":
+        return Pinhole(intr['fx'], intr['fy'], intr['cx'], intr['cy'], fov)
     else:
         raise NotImplementedError(f"model {type} not implemented")

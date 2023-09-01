@@ -24,10 +24,8 @@ class KB4:
                           self.k3 * theta ** 7 + self.k4 * theta ** 9
 
         # trick to bypass devide by zero
-        u = self.fx * theta_distorted * x / (r + x==0) + self.cx
-        u[x==0] = self.cx
-        v = self.fy * theta_distorted * y / (r + y==0) + self.cy
-        v[y==0] = self.cy
+        u = self.fx * theta_distorted * x / (r + (x==0)) + self.cx
+        v = self.fy * theta_distorted * y / (r + (y==0)) + self.cy
 
         return np.hstack((u.reshape(-1, 1), v.reshape(-1, 1))), valid
 

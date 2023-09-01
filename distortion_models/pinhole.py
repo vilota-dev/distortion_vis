@@ -1,9 +1,9 @@
 import numpy as np
 
 class Pinhole:
-    def __init__(self, fx, fy, cx, cy):
+    def __init__(self, fx, fy, cx, cy, fov = 150):
         self.fx, self.fy, self.cx, self.cy = fx, fy, cx, cy
-        self.fov = 150
+        self.fov = fov
 
     def __str__(self):
         return "pinhole"
